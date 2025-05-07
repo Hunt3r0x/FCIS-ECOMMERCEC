@@ -1,81 +1,82 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Admin Control Panel</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-</head>
-<body>
-    <h1>Admin Control Panel</h1>
-    <h2>Manage Users</h2>
-    <table>
-        <tr>
-            <th>ID</th>
-            <th>Username</th>
-            <th>Admin</th>
-            <th>Actions</th>
-        </tr>
-        {% for user in users %}
-        <tr>
-            <td>{{ user[0] }}</td>
-            <td>
-                <form method="post">
-                    <input type="hidden" name="action" value="edit_user">
-                    <input type="hidden" name="user_id" value="{{ user[0] }}">
-                    <input type="text" name="username" value="{{ user[1] }}">
-                    <input type="checkbox" name="is_admin" {% if user[3] %}checked{% endif %}> Admin
-                    <button type="submit">Save</button>
-                </form>
-            </td>
-            <td>
-                <form method="post">
-                    <input type="hidden" name="action" value="delete_user">
-                    <input type="hidden" name="user_id" value="{{ user[0] }}">
-                    <button type="submit">Delete</button>
-                </form>
-            </td>
-        </tr>
-        {% endfor %}
-    </table>
+{% extends "base.html" %}
+{% block content %}
+<h1>Admin Panel</h1>
 
-    <h2>Manage Books</h2>
-    <form method="post">
-        <input type="hidden" name="action" value="add_book">
-        <input type="text" name="title" placeholder="Title" required>
-        <input type="text" name="author" placeholder="Author" required>
-        <input type="number" step="0.01" name="price" placeholder="Price" required>
-        <button type="submit">Add Book</button>
+<h2>Add Book</h2>
+<form class="admin-add" method="post">
+    <input type="hidden" name="action" value="add_book">
+    <input name="title" placeholder="Title" required>
+    <input name="author" placeholder="Author" required>
+    <input name="price" type="number" step="0.01" placeholder="Price" required>
+    <select name="cover_url">
+        <option value="">-- Select cover --</option>
+        {% for img in images %}
+            <option value="{{ img }}">{{ img }}</option>
+        {% endfor %}
+    </select>
+    <input type="submit" value="Add Book">
+</form>
+
+<h2>Books</h2>
+<table>
+<tr><th>ID</th><th>Cover</th><th>Title</th><th>Author</th><th>Price</th><th>Actions</th></tr>
+{% for b in books %}
+<tr>
+<td>{{ b[0] }}</td>
+<td><img src="{{ url_for('static',filename=b[4]) if b[4] else url_for('static', filename='imgs/placeholder.jpg') }}" class="cover-small"></td>
+<td>{{ b[1] }}</td>
+<td>{{ b[2] }}</td>
+<td>${{ '%.2f'|format(b[3]) }}</td>
+<td>
+    <form style="display:inline" method="post">
+        <input type="hidden" name="action" value="edit_book">
+        <input type="hidden" name="book_id" value="{{ b[0] }}">
+        <input name="title" value="{{ b[1] }}" required>
+        <input name="author" value="{{ b[2] }}" required>
+        <input name="price" type="number" step="0.01" value="{{ b[3] }}" required>
+        <select name="cover_url">
+            <option value="">-- Select cover --</option>
+            {% for img in images %}
+                <option value="{{ img }}" {% if img==b[4] %}selected{% endif %}>{{ img }}</option>
+            {% endfor %}
+        </select>
+        <button>Save</button>
     </form>
+    <form style="display:inline" method="post">
+        <input type="hidden" name="action" value="delete_book">
+        <input type="hidden" name="book_id" value="{{ b[0] }}">
+        <button>Delete</button>
+    </form>
+</td>
+</tr>
+{% endfor %}
+</table>
 
-    <table>
-        <tr>
-            <th>ID</th>
-            <th>Title</th>
-            <th>Author</th>
-            <th>Price</th>
-            <th>Actions</th>
-        </tr>
-        {% for book in books %}
-        <tr>
-            <td>{{ book[0] }}</td>
-            <td>
-                <form method="post">
-                    <input type="hidden" name="action" value="edit_book">
-                    <input type="hidden" name="book_id" value="{{ book[0] }}">
-                    <input type="text" name="title" value="{{ book[1] }}">
-                    <input type="text" name="author" value="{{ book[2] }}">
-                    <input type="number" step="0.01" name="price" value="{{ book[3] }}">
-                    <button type="submit">Save</button>
-                </form>
-            </td>
-            <td>
-                <form method="post">
-                    <input type="hidden" name="action" value="delete_book">
-                    <input type="hidden" name="book_id" value="{{ book[0] }}">
-                    <button type="submit">Delete</button>
-                </form>
-            </td>
-        </tr>
-        {% endfor %}
-    </table>
-</body>
-</html>
+<h2>Users</h2>
+<table>
+<tr><th>ID</th><th>Username</th><th>Admin?</th><th>Actions</th></tr>
+{% for u in users %}
+<tr>
+<td>{{ u[0] }}</td>
+<td>{{ u[1] }}</td>
+<td>{{ 'Yes' if u[3] else 'No' }}</td>
+<td>
+    <form style="display:inline" method="post">
+        <input type="hidden" name="action" value="edit_user">
+        <input type="hidden" name="user_id" value="{{ u[0] }}">
+        <input name="username" value="{{ u[1] }}" required>
+        <label><input type="checkbox" name="is_admin" {% if u[3] %}checked{% endif %}> admin</label>
+        <button>Save</button>
+    </form>
+    {% if session['user_id'] != u[0] %}
+    <form style="display:inline" method="post">
+        <input type="hidden" name="action" value="delete_user">
+        <input type="hidden" name="user_id" value="{{ u[0] }}">
+        <button>Delete</button>
+    </form>
+    {% endif %}
+</td>
+</tr>
+{% endfor %}
+</table>
+{% endblock %}
