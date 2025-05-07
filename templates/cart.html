@@ -1,21 +1,22 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Your Cart</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-</head>
-<body>
-    <h1>Your Cart</h1>
-    <ul>
-        {% for item in cart_items %}
-            <li>
-                <h3>{{ item['title'] }}</h3>
-                <p>Author: {{ item['author'] }}</p>
-                <p>Price: ${{ item['price'] }}</p>
-            </li>
-        {% endfor %}
-    </ul>
-    <p>Total Price: ${{ total_price }}</p>
-    <a href="{{ url_for('home') }}">Continue Shopping</a>
-</body>
-</html>
+{% extends "base.html" %}
+{% block content %}
+<h1>Your Cart</h1>
+{% if cart_items %}
+<ul class="cart-list">
+    {% for i in cart_items %}
+    <li>
+        <img src="{{ url_for('static', filename=i[4]) if i[4]
+          else url_for('static', filename='imgs/placeholder.jpg') }}">
+        <div style="flex:1">
+            <strong>{{ i[1] }}</strong><br><small>{{ i[2] }}</small>
+        </div>
+        <div class="price">${{ '%.2f'|format(i[3]) }}</div>
+    </li>
+    {% endfor %}
+</ul>
+<p><strong>Total:</strong> ${{ '%.2f'|format(total_price) }}</p>
+<a href="{{ url_for('clear_cart') }}"><button>Clear Cart</button></a>
+{% else %}
+<p>Your cart is empty.</p>
+{% endif %}
+{% endblock %}
