@@ -1,5 +1,4 @@
 from flask import Flask, render_template, redirect, url_for, request, session
-import os
 import hashlib
 import mysql.connector
 
@@ -28,7 +27,8 @@ def init_db():
     cursor.execute('''CREATE TABLE IF NOT EXISTS users (
                         id INT AUTO_INCREMENT PRIMARY KEY,
                         username VARCHAR(255) UNIQUE,
-                        password TEXT
+                        password TEXT,
+                        is_admin BOOLEAN DEFAULT FALSE
                     )''')
 
     cursor.execute('''CREATE TABLE IF NOT EXISTS cart (
@@ -59,7 +59,13 @@ def register():
 
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute('INSERT INTO users (username, password) VALUES (%s, %s)', (username, password))
+
+        cursor.execute('SELECT COUNT(*) FROM users')
+        user_count = cursor.fetchone()[0]
+
+        is_admin = user_count == 0
+
+        cursor.execute('INSERT INTO users (username, password, is_admin) VALUES (%s, %s, %s)', (username, password, is_admin))
         conn.commit()
         conn.close()
 
@@ -81,58 +87,58 @@ def login():
 
         if user:
             session['user_id'] = user[0]
+            session['is_admin'] = user[3]
             return redirect(url_for('home'))
 
     return render_template('login.html')
 
-@app.route('/logout')
-def logout():
-    session.pop('user_id', None)
-    return redirect(url_for('home'))
+@app.route('/admin', methods=['GET', 'POST'])
+def admin_panel():
+    if 'is_admin' not in session or not session['is_admin']:
+        return redirect(url_for('home'))
 
-@app.route('/add_to_cart/<int:book_id>')
-def add_to_cart(book_id):
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-
-    user_id = session['user_id']
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('INSERT INTO cart (user_id, book_id) VALUES (%s, %s)', (user_id, book_id))
-    conn.commit()
-    conn.close()
 
-    return redirect(url_for('cart'))
+    if request.method == 'POST':
+        action = request.form.get('action')
+        if action == 'delete_user':
+            user_id = request.form.get('user_id')
+            cursor.execute('DELETE FROM users WHERE id = %s', (user_id,))
 
-@app.route('/cart')
-def cart():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
+        elif action == 'add_book':
+            title = request.form.get('title')
+            author = request.form.get('author')
+            price = float(request.form.get('price'))
+            cursor.execute('INSERT INTO books (title, author, price) VALUES (%s, %s, %s)', (title, author, price))
 
-    user_id = session['user_id']
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute('''SELECT b.title, b.author, b.price 
-                      FROM cart c 
-                      JOIN books b ON c.book_id = b.id 
-                      WHERE c.user_id = %s''', (user_id,))
-    cart_items = cursor.fetchall()
-    total_price = sum(item[2] for item in cart_items) if cart_items else 0
-    conn.close()
+        elif action == 'delete_book':
+            book_id = request.form.get('book_id')
+            cursor.execute('DELETE FROM books WHERE id = %s', (book_id,))
 
-    return render_template('cart.html', cart_items=cart_items, total_price=total_price)
+        elif action == 'edit_book':
+            book_id = request.form.get('book_id')
+            title = request.form.get('title')
+            author = request.form.get('author')
+            price = float(request.form.get('price'))
+            cursor.execute('UPDATE books SET title=%s, author=%s, price=%s WHERE id=%s', (title, author, price, book_id))
 
-@app.route('/clear_cart')
-def clear_cart():
-    if 'user_id' in session:
-        user_id = session['user_id']
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute('DELETE FROM cart WHERE user_id = %s', (user_id,))
+        elif action == 'edit_user':
+            user_id = request.form.get('user_id')
+            username = request.form.get('username')
+            is_admin = request.form.get('is_admin') == 'on'
+            cursor.execute('UPDATE users SET username=%s, is_admin=%s WHERE id=%s', (username, is_admin, user_id))
+
         conn.commit()
-        conn.close()
 
-    return redirect(url_for('cart'))
+    cursor.execute('SELECT * FROM users')
+    users = cursor.fetchall()
+
+    cursor.execute('SELECT * FROM books')
+    books = cursor.fetchall()
+
+    conn.close()
+    return render_template('admin.html', users=users, books=books)
 
 if __name__ == '__main__':
     init_db()
