@@ -1,21 +1,18 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Bookstore - Home</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-</head>
-<body>
-    <h1>Welcome to the Bookstore</h1>
-    <ul>
-        {% for book in books %}
-            <li>
-                <h3>{{ book[1] }}</h3>
-                <p>Author: {{ book[2] }}</p>
-                <p>Price: ${{ book[3] }}</p>
-                <a href="{{ url_for('add_to_cart', book_id=book[0]) }}">Add to Cart</a>
-            </li>
-        {% endfor %}
-    </ul>
-    <a href="{{ url_for('cart') }}">Go to Cart</a>
-</body>
-</html>
+{% extends "base.html" %}
+{% block content %}
+<h1>Bookstore</h1>
+<div class="grid">
+    {% for b in books %}
+    <div class="card">
+        <img src="{{ url_for('static', filename=b[4]) if b[4]
+          else url_for('static', filename='imgs/placeholder.jpg') }}">
+        <div class="body">
+            <h3>{{ b[1] }}</h3>
+            <p class="author">{{ b[2] }}</p>
+            <div class="price">${{ '%.2f'|format(b[3]) }}</div>
+            <a href="{{ url_for('add_to_cart', book_id=b[0]) }}"><button>Add to Cart</button></a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
